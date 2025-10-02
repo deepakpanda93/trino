@@ -473,4 +473,32 @@ public abstract class ForwardingConnection
     {
         return delegate().isWrapperFor(iface);
     }
+
+    @SuppressWarnings("MissingOverride") // Part of the JDK 26, JDBC 4.5 spec
+    public String enquoteLiteral(String val)
+            throws SQLException
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("MissingOverride") // Part of the JDK 26, JDBC 4.5 spec
+    public String enquoteIdentifier(String identifier, boolean alwaysDelimit)
+            throws SQLException
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("MissingOverride") // Part of the JDK 26, JDBC 4.5 spec
+    public boolean isSimpleIdentifier(String identifier)
+            throws SQLException
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("MissingOverride") // Part of the JDK 26, JDBC 4.5 spec
+    public String enquoteNCharLiteral(String val)
+            throws SQLException
+    {
+        throw new UnsupportedOperationException();
+    }
 }
