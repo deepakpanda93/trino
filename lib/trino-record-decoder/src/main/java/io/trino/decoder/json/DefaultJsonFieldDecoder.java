@@ -13,7 +13,6 @@
  */
 package io.trino.decoder.json;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.trino.decoder.DecoderColumnHandle;
@@ -21,6 +20,7 @@ import io.trino.decoder.FieldValueProvider;
 import io.trino.spi.TrinoException;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
+import tools.jackson.databind.JsonNode;
 
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.decoder.DecoderErrorCode.DECODER_CONVERSION_NOT_SUPPORTED;
@@ -126,6 +126,15 @@ public class DefaultJsonFieldDecoder
         public boolean getBoolean()
         {
             if (value.isValueNode()) {
+                if (value.isBoolean()) {
+                    return value.asBoolean();
+                }
+                if (value.isNumber()) {
+                    return value.numberValue().equals(1) ? Boolean.TRUE : Boolean.FALSE;
+                }
+                if (value.isString()) {
+                    return Boolean.parseBoolean(value.asString());
+                }
                 return value.asBoolean();
             }
             throw new TrinoException(
@@ -145,7 +154,7 @@ public class DefaultJsonFieldDecoder
                     }
                 }
                 else if (value.isValueNode()) {
-                    longValue = parseLong(value.asText());
+                    longValue = parseLong(value.asString());
                     if (longValue >= minValue && longValue <= maxValue) {
                         return longValue;
                     }
@@ -156,7 +165,7 @@ public class DefaultJsonFieldDecoder
             }
             throw new TrinoException(
                     DECODER_CONVERSION_NOT_SUPPORTED,
-                    format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
+                    format("could not parse value '%s' as '%s' for column '%s'", value.toString(), columnHandle.getType(), columnHandle.getName()));
         }
 
         @Override
@@ -167,7 +176,7 @@ public class DefaultJsonFieldDecoder
                     return value.doubleValue();
                 }
                 if (value.isValueNode()) {
-                    return parseDouble(value.asText());
+                    return parseDouble(value.asString());
                 }
             }
             catch (NumberFormatException ignore) {
@@ -175,13 +184,13 @@ public class DefaultJsonFieldDecoder
             }
             throw new TrinoException(
                     DECODER_CONVERSION_NOT_SUPPORTED,
-                    format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
+                    format("could not parse value '%s' as '%s' for column '%s'", value.toString(), columnHandle.getType(), columnHandle.getName()));
         }
 
         @Override
         public Slice getSlice()
         {
-            String textValue = value.isValueNode() ? value.asText() : value.toString();
+            String textValue = value.isValueNode() ? value.asString() : value.toString();
             Slice slice = utf8Slice(textValue);
             if (columnHandle.getType() instanceof VarcharType) {
                 slice = truncateToLength(slice, columnHandle.getType());

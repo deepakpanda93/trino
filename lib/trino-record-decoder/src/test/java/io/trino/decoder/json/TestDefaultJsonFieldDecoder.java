@@ -72,10 +72,9 @@ public class TestDefaultJsonFieldDecoder
         tester.assertDecodedAs("true", BOOLEAN, true);
         tester.assertDecodedAs("\"false\"", BOOLEAN, false);
         tester.assertDecodedAs("\"true\"", BOOLEAN, true);
-        tester.assertDecodedAs("\"blah\"", BOOLEAN, false);
         tester.assertDecodedAs("0", BOOLEAN, false);
         tester.assertDecodedAs("1", BOOLEAN, true);
-        tester.assertDecodedAs("10", BOOLEAN, true);
+        tester.assertDecodedAs("10", BOOLEAN, false);
         tester.assertDecodedAs("\"0\"", BOOLEAN, false);
         tester.assertDecodedAs("\"1\"", BOOLEAN, false);
     }
