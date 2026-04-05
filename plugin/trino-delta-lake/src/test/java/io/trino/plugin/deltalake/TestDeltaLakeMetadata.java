@@ -80,12 +80,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.testing.Closeables.closeAll;
+import static io.trino.hdfs.HdfsTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.hdfs.HdfsTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.REGULAR;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.COLUMN_MAPPING_MODE_PROPERTY;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.PARTITIONED_BY_PROPERTY;
 import static io.trino.plugin.deltalake.DeltaTestingConnectorSession.SESSION;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.spi.connector.SaveMode.FAIL;
 import static io.trino.spi.security.PrincipalType.USER;
 import static io.trino.spi.type.BigintType.BIGINT;
@@ -495,10 +495,8 @@ public class TestDeltaLakeMetadata
                 new ProtocolEntry(1, 2, Optional.empty(), Optional.empty()),
                 createConstrainedColumnsTuple(constrainedColumns),
                 TupleDomain.all(),
-                Optional.of(DeltaLakeTableHandle.WriteType.UPDATE),
+                false,
                 Optional.of(projectedColumns),
-                Optional.of(ImmutableList.of(BOOLEAN_COLUMN_HANDLE)),
-                Optional.of(ImmutableList.of(DOUBLE_COLUMN_HANDLE)),
                 Optional.empty(),
                 0,
                 false);

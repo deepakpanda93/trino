@@ -95,13 +95,13 @@ import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.units.DataSize.Unit.BYTE;
+import static io.trino.hdfs.HdfsTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.metadata.FunctionManager.createTestingFunctionManager;
 import static io.trino.orc.OrcReader.MAX_BATCH_SIZE;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.REGULAR;
 import static io.trino.plugin.hive.HiveColumnHandle.createBaseColumn;
 import static io.trino.plugin.hive.HivePageSourceProvider.ColumnMapping.buildColumnMappings;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.HiveTestUtils.SESSION;
 import static io.trino.plugin.hive.acid.AcidTransaction.NO_ACID_TRANSACTION;
 import static io.trino.plugin.hive.util.HiveTypeUtil.getTypeSignature;
@@ -596,8 +596,9 @@ public class TestOrcPageSourceMemoryTracking
                     0,
                     new PlanNodeId("0"),
                     new PlanNodeId("0"),
-                    _ -> (_, _, _, _, _) -> pageSource,
+                    _ -> (_, _, _, _, _, _) -> pageSource,
                     TEST_TABLE_HANDLE,
+                    Optional.empty(),
                     columns.stream().map(ColumnHandle.class::cast).collect(toImmutableList()),
                     types,
                     DynamicFilter.EMPTY);
@@ -618,9 +619,10 @@ public class TestOrcPageSourceMemoryTracking
                     0,
                     new PlanNodeId("test"),
                     new PlanNodeId("0"),
-                    (_) -> (_, _, _, _, _) -> pageSource,
+                    (_) -> (_, _, _, _, _, _) -> pageSource,
                     (_) -> pageProcessor.get(),
                     TEST_TABLE_HANDLE,
+                    Optional.empty(),
                     columns.stream().map(ColumnHandle.class::cast).collect(toList()),
                     DynamicFilter.EMPTY,
                     types,

@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.HttpHeaders;
+import io.airlift.http.client.HeaderNames;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
 import io.airlift.http.client.StaticBodyGenerator;
@@ -64,7 +65,7 @@ import static org.testcontainers.utility.DockerImageName.parse;
 public class TestingPinotCluster
         implements Closeable
 {
-    public static final String PINOT_LATEST_IMAGE_NAME = "apachepinot/pinot:1.2.0";
+    public static final String PINOT_LATEST_IMAGE_NAME = "apachepinot/pinot:1.4.0";
     private static final String ZOOKEEPER_INTERNAL_HOST = "zookeeper";
     private static final JsonCodec<List<String>> LIST_JSON_CODEC = listJsonCodec(String.class);
     private static final JsonCodec<PinotSuccessResponse> PINOT_SUCCESS_RESPONSE_JSON_CODEC = jsonCodec(PinotSuccessResponse.class);
@@ -181,9 +182,9 @@ public class TestingPinotCluster
             byte[] bytes = stream.readAllBytes();
             Request request = Request.Builder.preparePost()
                     .setUri(getControllerUri("schemas"))
-                    .setHeader(HttpHeaders.ACCEPT, APPLICATION_JSON)
-                    .setHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                    .addHeader(HttpHeaders.AUTHORIZATION, secured ? controllerAuthToken() : "")
+                    .setHeader(HeaderNames.ACCEPT, APPLICATION_JSON)
+                    .setHeader(HeaderNames.CONTENT_TYPE, APPLICATION_JSON)
+                    .addHeader(HeaderNames.AUTHORIZATION, secured ? controllerAuthToken() : "")
                     .setBodyGenerator(StaticBodyGenerator.createStaticBodyGenerator(bytes))
                     .build();
 
@@ -202,8 +203,8 @@ public class TestingPinotCluster
             throws Exception
     {
         Request request = Request.Builder.prepareGet().setUri(getControllerUri("schemas"))
-                .setHeader(HttpHeaders.ACCEPT, APPLICATION_JSON)
-                .addHeader(HttpHeaders.AUTHORIZATION, secured ? controllerAuthToken() : "")
+                .setHeader(HeaderNames.ACCEPT, APPLICATION_JSON)
+                .addHeader(HeaderNames.AUTHORIZATION, secured ? controllerAuthToken() : "")
                 .build();
         doWithRetries(() -> {
             List<String> schemas = httpClient.execute(request, createJsonResponseHandler(LIST_JSON_CODEC));
@@ -219,9 +220,9 @@ public class TestingPinotCluster
             byte[] bytes = stream.readAllBytes();
             Request request = Request.Builder.preparePost()
                     .setUri(getControllerUri("tables"))
-                    .setHeader(HttpHeaders.ACCEPT, APPLICATION_JSON)
-                    .setHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                    .addHeader(HttpHeaders.AUTHORIZATION, secured ? controllerAuthToken() : "")
+                    .setHeader(HeaderNames.ACCEPT, APPLICATION_JSON)
+                    .setHeader(HeaderNames.CONTENT_TYPE, APPLICATION_JSON)
+                    .addHeader(HeaderNames.AUTHORIZATION, secured ? controllerAuthToken() : "")
                     .setBodyGenerator(StaticBodyGenerator.createStaticBodyGenerator(bytes))
                     .build();
 
@@ -237,9 +238,9 @@ public class TestingPinotCluster
             byte[] bytes = stream.readAllBytes();
             Request request = Request.Builder.preparePost()
                     .setUri(getControllerUri("tables"))
-                    .setHeader(HttpHeaders.ACCEPT, APPLICATION_JSON)
-                    .setHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON)
-                    .addHeader(HttpHeaders.AUTHORIZATION, secured ? controllerAuthToken() : "")
+                    .setHeader(HeaderNames.ACCEPT, APPLICATION_JSON)
+                    .setHeader(HeaderNames.CONTENT_TYPE, APPLICATION_JSON)
+                    .addHeader(HeaderNames.AUTHORIZATION, secured ? controllerAuthToken() : "")
                     .setBodyGenerator(StaticBodyGenerator.createStaticBodyGenerator(bytes))
                     .build();
 

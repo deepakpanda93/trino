@@ -1448,6 +1448,7 @@ public class EventDrivenFaultTolerantQueryScheduler
 
                 StageId stageId = getStageId(fragment.getId());
                 SqlStage stage = SqlStage.createSqlStage(
+                        metadata,
                         stageId,
                         fragment,
                         TableInfo.extract(session, metadata, fragment),
@@ -2649,6 +2650,7 @@ public class EventDrivenFaultTolerantQueryScheduler
             // TODO[https://github.com/trinodb/trino/issues/18025]: split into smaller partitions here if necessary (for example if a task for a given partition failed with out of memory)
 
             // reschedule a task
+            log.warn(failure, "Rescheduling task %s due to %s error", taskId, errorCode != null ? errorCode.getName() : "unknown");
             return ImmutableList.of(PrioritizedScheduledTask.create(stage.getStageId(), partitionId, schedulingPriority));
         }
 

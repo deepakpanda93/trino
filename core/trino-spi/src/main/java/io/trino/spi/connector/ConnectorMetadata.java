@@ -139,6 +139,19 @@ public interface ConnectorMetadata
         throw new TrinoException(NOT_SUPPORTED, "This connector does not support table procedures");
     }
 
+    /**
+     * Returns source table columns required to execute a table procedure.
+     * <p>
+     * Connectors may override this to return the exact source-column set needed for the procedure.
+     * The default implementation returns handles for all non-hidden columns.
+     */
+    default Set<ColumnHandle> getColumnHandlesForTableExecute(ConnectorSession connectorSession, ConnectorTableHandle tableHandle, ConnectorTableExecuteHandle connectorTableExecuteHandle)
+    {
+        return getColumnHandles(connectorSession, tableHandle).values().stream()
+                .filter(column -> !getColumnMetadata(connectorSession, tableHandle, column).isHidden())
+                .collect(toUnmodifiableSet());
+    }
+
     default Optional<ConnectorTableLayout> getLayoutForTableExecute(ConnectorSession session, ConnectorTableExecuteHandle tableExecuteHandle)
     {
         return Optional.empty();
@@ -865,7 +878,8 @@ public interface ConnectorMetadata
             Collection<ComputedStatistics> computedStatistics,
             List<ConnectorTableHandle> sourceTableHandles,
             boolean hasForeignSourceTables,
-            boolean hasSourceTableFunctions)
+            boolean hasSourceTableFunctions,
+            boolean hasNonDeterministicFunctions)
     {
         throw new TrinoException(GENERIC_INTERNAL_ERROR, "ConnectorMetadata beginRefreshMaterializedView() is implemented without finishRefreshMaterializedView()");
     }
@@ -1827,5 +1841,29 @@ public interface ConnectorMetadata
     default WriterScalingOptions getInsertWriterScalingOptions(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return WriterScalingOptions.DISABLED;
+    }
+
+    /**
+     * Returns credentials that can be used in {@link ConnectorPageSourceProvider}.
+     */
+    default Optional<ConnectorTableCredentials> getTableCredentials(ConnectorSession session, ConnectorTableHandle tableHandle)
+    {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns credentials that can be used in {@link ConnectorPageSinkProvider}.
+     */
+    default Optional<ConnectorTableCredentials> getTableCredentials(ConnectorSession session, ConnectorWritableTableHandle tableHandle)
+    {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns {@link ConnectorTableCredentials} for specified {@link ConnectorTableFunctionHandle} or {@link Optional#empty} if there are no credentials.
+     */
+    default Optional<ConnectorTableCredentials> getTableCredentials(ConnectorSession session, ConnectorTableFunctionHandle tableFunctionHandle)
+    {
+        return Optional.empty();
     }
 }

@@ -68,6 +68,7 @@ import static io.airlift.concurrent.MoreFutures.getFutureValue;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.units.DataSize.Unit.BYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
+import static io.trino.hdfs.HdfsTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.hive.thrift.metastore.hive_metastoreConstants.FILE_INPUT_FORMAT;
 import static io.trino.metastore.SortingColumn.Order.ASCENDING;
 import static io.trino.plugin.hive.HiveColumnHandle.ColumnType.PARTITION_KEY;
@@ -78,7 +79,6 @@ import static io.trino.plugin.hive.HiveCompressionOption.NONE;
 import static io.trino.plugin.hive.HiveStorageFormat.AVRO;
 import static io.trino.plugin.hive.HiveStorageFormat.ORC;
 import static io.trino.plugin.hive.HiveStorageFormat.PARQUET;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 import static io.trino.plugin.hive.HiveTestUtils.PAGE_SORTER;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHiveFileWriterFactories;
 import static io.trino.plugin.hive.HiveTestUtils.getDefaultHivePageSourceFactories;
@@ -131,6 +131,10 @@ public class TestHivePageSink
             }
             if (format == HiveStorageFormat.ESRI) {
                 // ESRI format is readonly
+                continue;
+            }
+            if (format == HiveStorageFormat.ESRI_GEO_JSON) {
+                // ESRI_GEO_JSON format is readonly
                 continue;
             }
             if (format == HiveStorageFormat.SEQUENCEFILE_PROTOBUF) {
@@ -413,7 +417,7 @@ public class TestHivePageSink
                 TESTING_TYPE_MANAGER,
                 config,
                 getDefaultHivePageSourceFactories(fileSystemFactory, config));
-        return provider.createPageSource(transaction, getHiveSession(config), split, table, ImmutableList.copyOf(getColumnHandles()), DynamicFilter.EMPTY);
+        return provider.createPageSource(transaction, getHiveSession(config), split, table, Optional.empty(), ImmutableList.copyOf(getColumnHandles()), DynamicFilter.EMPTY);
     }
 
     private static ConnectorPageSink createPageSink(
@@ -480,7 +484,7 @@ public class TestHivePageSink
                 new HiveLocationService(HDFS_FILE_SYSTEM_FACTORY, config),
                 partitionUpdateCodec,
                 stats);
-        return provider.createPageSink(transaction, getHiveSession(config), handle, TESTING_PAGE_SINK_ID);
+        return provider.createPageSink(transaction, getHiveSession(config), handle, Optional.empty(), TESTING_PAGE_SINK_ID);
     }
 
     private static List<HiveColumnHandle> getColumnHandles()

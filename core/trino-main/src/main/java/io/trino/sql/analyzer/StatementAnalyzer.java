@@ -4603,7 +4603,7 @@ class StatementAnalyzer
                     else if (element instanceof GroupingSets groupingSets) {
                         product = switch (groupingSets.getType()) {
                             case CUBE -> {
-                                int exponent = ((GroupingSets) element).getSets().size();
+                                int exponent = groupingSets.getSets().size();
                                 if (exponent > 30) {
                                     throw new ArithmeticException();
                                 }
@@ -5049,7 +5049,7 @@ class StatementAnalyzer
                     throw semanticException(TYPE_MISMATCH, node.getSelect(), "DISTINCT can only be applied to comparable types (actual: %s)", rowType.getFields().get(i).getType());
                 }
 
-                Optional<String> name = ((RowType) type).getFields().get(i).getName();
+                Optional<String> name = rowType.getFields().get(i).getName();
                 if (!allColumns.getAliases().isEmpty()) {
                     name = Optional.of(allColumns.getAliases().get(i).getValue());
                 }
@@ -6074,6 +6074,9 @@ class StatementAnalyzer
             if (version.isEmpty()) {
                 return tableVersion;
             }
+            if (analysis.isDescribe()) {
+                throw semanticException(NOT_SUPPORTED, table, "DESCRIBE is not supported if a versioned table uses parameters");
+            }
             ExpressionAnalysis expressionAnalysis = analyzeExpression(version.get(), scope.get());
             analysis.recordSubqueries(table, expressionAnalysis);
 
@@ -6083,7 +6086,7 @@ class StatementAnalyzer
             if (versionType == UNKNOWN) {
                 throw semanticException(INVALID_ARGUMENTS, table.getQueryPeriod().get(), "Pointer value cannot be NULL");
             }
-            Object evaluatedVersion = evaluateConstant(version.get(), versionType, plannerContext, session, accessControl);
+            Object evaluatedVersion = evaluateConstant(version.get(), versionType, analysis.getParameters(), plannerContext, session, accessControl);
             TableVersion extractedVersion = new TableVersion(pointerType, versionType, evaluatedVersion);
             validateVersionPointer(table.getQueryPeriod().get(), extractedVersion);
             return Optional.of(extractedVersion);

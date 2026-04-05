@@ -68,9 +68,9 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static io.trino.hdfs.HdfsTestUtils.HDFS_ENVIRONMENT;
+import static io.trino.hdfs.HdfsTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.orc.metadata.CompressionKind.NONE;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
-import static io.trino.plugin.hive.HiveTestUtils.HDFS_FILE_SYSTEM_STATS;
 import static io.trino.plugin.iceberg.ColumnIdentity.TypeCategory.PRIMITIVE;
 import static io.trino.plugin.iceberg.IcebergFileFormat.ORC;
 import static io.trino.plugin.iceberg.IcebergTestUtils.FILE_IO_FACTORY;
@@ -150,8 +150,8 @@ public class TestIcebergNodeLocalDynamicSplitPruning
                     ImmutableList.of(),
                     SplitWeight.standard(),
                     TupleDomain.all(),
-                    ImmutableMap.of(),
-                    0);
+                    0,
+                    OptionalLong.empty());
 
             String tablePath = inputFile.location().fileName();
             TableHandle tableHandle = new TableHandle(
@@ -212,8 +212,8 @@ public class TestIcebergNodeLocalDynamicSplitPruning
                     ImmutableList.of(),
                     SplitWeight.standard(),
                     TupleDomain.withColumnDomains(ImmutableMap.of(keyColumnHandle, Domain.singleValue(INTEGER, (long) keyColumnValue))),
-                    ImmutableMap.of(),
-                    0);
+                    0,
+                    OptionalLong.empty());
 
             tableHandle = new TableHandle(
                     TEST_CATALOG_HANDLE,
@@ -322,8 +322,8 @@ public class TestIcebergNodeLocalDynamicSplitPruning
                     ImmutableList.of(),
                     SplitWeight.standard(),
                     TupleDomain.all(),
-                    ImmutableMap.of(),
-                    0);
+                    0,
+                    OptionalLong.empty());
 
             String tablePath = inputFile.location().fileName();
             TableHandle tableHandle = new TableHandle(
@@ -475,8 +475,8 @@ public class TestIcebergNodeLocalDynamicSplitPruning
                     ImmutableList.of(),
                     SplitWeight.standard(),
                     TupleDomain.all(),
-                    ImmutableMap.of(),
-                    0);
+                    0,
+                    OptionalLong.empty());
 
             String tablePath = inputFile.location().fileName();
             // Simulate the situation where `month` column is added at a later phase as partitioning column
@@ -588,6 +588,7 @@ public class TestIcebergNodeLocalDynamicSplitPruning
                 getSession(icebergConfig),
                 split,
                 tableHandle.connectorHandle(),
+                Optional.empty(),
                 columns,
                 dynamicFilter);
     }
