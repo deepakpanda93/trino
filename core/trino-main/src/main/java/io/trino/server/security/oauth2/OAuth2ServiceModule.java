@@ -39,6 +39,7 @@ public class OAuth2ServiceModule
     protected void setup(Binder binder)
     {
         jaxrsBinder(binder).bind(OAuth2CallbackResource.class);
+        jaxrsBinder(binder).bind(OAuth2AuthorizationServerMetadataResource.class);
         newOptionalBinder(binder, OAuth2WebUiInstalled.class);
 
         configBinder(binder).bindConfig(OAuth2Config.class);
