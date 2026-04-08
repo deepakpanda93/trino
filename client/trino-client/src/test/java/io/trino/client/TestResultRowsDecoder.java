@@ -76,6 +76,16 @@ class TestResultRowsDecoder
     }
 
     @Test
+    public void testVariantJsonNodeMaterialization()
+            throws Exception
+    {
+        try (ResultRowsDecoder decoder = new ResultRowsDecoder(); JsonParser parser = JSON_MAPPER.createParser("[[{\"a\":1,\"b\":[\"x\"]}]]")) {
+            assertThat(eagerlyMaterialize(decoder.toRows(fromQueryData(new JsonQueryData(parser.readValueAsTree()), variantColumns()))))
+                    .containsExactly(ImmutableList.of("{\"a\":1,\"b\":[\"x\"]}"));
+        }
+    }
+
+    @Test
     public void testInlineJsonNodeMaterialization()
             throws Exception
     {
@@ -124,6 +134,20 @@ class TestResultRowsDecoder
         }
         assertThat(loaded.get()).isEqualTo(2);
         assertThat(acknowledged.get()).isEqualTo(2);
+    }
+
+    @Test
+    public void testSpooledVariantJsonMaterialization()
+            throws Exception
+    {
+        AtomicInteger loaded = new AtomicInteger();
+        AtomicInteger acknowledged = new AtomicInteger();
+        try (ResultRowsDecoder decoder = new ResultRowsDecoder(new StaticLoader(loaded, acknowledged, "[[\"{\\\"a\\\":1,\\\"b\\\":[\\\"x\\\"]}\"]]"))) {
+            assertThat(eagerlyMaterialize(decoder.toRows(fromSegments(variantColumns(), spooledSegment(1)))))
+                    .containsExactly(ImmutableList.of("{\"a\":1,\"b\":[\"x\"]}"));
+        }
+        assertThat(loaded.get()).isEqualTo(1);
+        assertThat(acknowledged.get()).isEqualTo(1);
     }
 
     @Test
@@ -206,18 +230,25 @@ class TestResultRowsDecoder
     {
         private final AtomicInteger loaded;
         private final AtomicInteger acknowledged;
+        private final String data;
 
         public StaticLoader(AtomicInteger loaded, AtomicInteger acknowledged)
         {
+            this(loaded, acknowledged, "[[2137], [1337]]");
+        }
+
+        public StaticLoader(AtomicInteger loaded, AtomicInteger acknowledged, String data)
+        {
             this.loaded = requireNonNull(loaded, "loaded is null");
             this.acknowledged = requireNonNull(acknowledged, "acknowledged is null");
+            this.data = requireNonNull(data, "data is null");
         }
 
         @Override
         public InputStream load(SpooledSegment segment)
         {
             loaded.incrementAndGet();
-            return new ByteArrayInputStream("[[2137], [1337]]".getBytes(UTF_8));
+            return new ByteArrayInputStream(data.getBytes(UTF_8));
         }
 
         @Override
@@ -254,12 +285,17 @@ class TestResultRowsDecoder
 
     private static QueryResults fromQueryData(QueryData queryData)
     {
+        return fromQueryData(queryData, ImmutableList.of(new Column("id", "integer", new ClientTypeSignature("integer", ImmutableList.of()))));
+    }
+
+    private static QueryResults fromQueryData(QueryData queryData, List<Column> columns)
+    {
         return new QueryResults(
                 "id",
                 URI.create("https://localhost"),
                 URI.create("https://localhost"),
                 URI.create("https://localhost"),
-                ImmutableList.of(new Column("id", "integer", new ClientTypeSignature("integer", ImmutableList.of()))),
+                columns,
                 queryData,
                 StatementStats.builder()
                         .setState("FINISHED")
@@ -274,10 +310,15 @@ class TestResultRowsDecoder
 
     private static QueryResults fromSegments(Segment... segments)
     {
+        return fromSegments(ImmutableList.of(new Column("id", "integer", new ClientTypeSignature("integer", ImmutableList.of()))), segments);
+    }
+
+    private static QueryResults fromSegments(List<Column> columns, Segment... segments)
+    {
         return fromQueryData(EncodedQueryData
                 .builder("json")
                 .withSegments(Arrays.asList(segments))
-                .build());
+                .build(), columns);
     }
 
     private static Segment spooledSegment(long rows)
@@ -287,5 +328,10 @@ class TestResultRowsDecoder
                 .build();
 
         return spooled(URI.create("http://localhost"), URI.create("http://localhost"), attributes, ImmutableMap.of());
+    }
+
+    private static List<Column> variantColumns()
+    {
+        return ImmutableList.of(new Column("variant", "variant", new ClientTypeSignature("variant", ImmutableList.of())));
     }
 }
