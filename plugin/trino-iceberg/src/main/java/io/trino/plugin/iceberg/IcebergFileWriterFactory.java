@@ -88,6 +88,7 @@ import static io.trino.plugin.iceberg.IcebergUtil.getOrcBloomFilterColumns;
 import static io.trino.plugin.iceberg.IcebergUtil.getOrcBloomFilterFpp;
 import static io.trino.plugin.iceberg.IcebergUtil.getParquetBloomFilterColumns;
 import static io.trino.plugin.iceberg.TypeConverter.toTrinoType;
+import static io.trino.plugin.iceberg.util.IcebergParquetSchemaConverter.convert;
 import static io.trino.plugin.iceberg.util.OrcTypeConverter.toOrcType;
 import static io.trino.plugin.iceberg.util.PrimitiveTypeMapBuilder.makeTypeMap;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -95,7 +96,6 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.apache.iceberg.TableProperties.DEFAULT_WRITE_METRICS_MODE;
 import static org.apache.iceberg.io.DeleteSchemaUtil.pathPosSchema;
-import static org.apache.iceberg.parquet.ParquetSchemaUtil.convert;
 
 public class IcebergFileWriterFactory
 {
@@ -201,7 +201,7 @@ public class IcebergFileWriterFactory
                     rollbackAction,
                     fileColumnTypes,
                     fileColumnNames,
-                    convert(toFileSchema(icebergSchema), "table"),
+                    convert(icebergSchema, "table"),
                     makeTypeMap(fileColumnTypes, fileColumnNames),
                     parquetWriterOptions,
                     IntStream.range(0, fileColumnNames.size()).toArray(),

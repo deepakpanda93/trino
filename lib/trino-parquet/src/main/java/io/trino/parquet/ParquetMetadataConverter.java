@@ -25,6 +25,8 @@ import org.apache.parquet.format.DateType;
 import org.apache.parquet.format.DecimalType;
 import org.apache.parquet.format.Encoding;
 import org.apache.parquet.format.EnumType;
+import org.apache.parquet.format.GeographyType;
+import org.apache.parquet.format.GeometryType;
 import org.apache.parquet.format.IntType;
 import org.apache.parquet.format.JsonType;
 import org.apache.parquet.format.ListType;
@@ -59,6 +61,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNullElse;
 import static org.apache.parquet.CorruptStatistics.shouldIgnoreStatistics;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.BsonLogicalTypeAnnotation;
 import static org.apache.parquet.schema.LogicalTypeAnnotation.DateLogicalTypeAnnotation;
@@ -160,8 +163,18 @@ public final class ParquetMetadataConverter
             case UUID -> uuidType();
             case FLOAT16 -> float16Type();
             case VARIANT -> variantType((byte) 1);
-            case GEOMETRY -> geometryType("OGC:CRS84");
-            case GEOGRAPHY -> geographyType();
+            case GEOMETRY -> {
+                GeometryType geometry = type.getGEOMETRY();
+                yield geometryType(geometry.isSetCrs() ? geometry.getCrs() : LogicalTypeAnnotation.DEFAULT_CRS);
+            }
+            case GEOGRAPHY -> {
+                GeographyType geography = type.getGEOGRAPHY();
+                yield geographyType(
+                        geography.isSetCrs() ? geography.getCrs() : LogicalTypeAnnotation.DEFAULT_CRS,
+                        geography.isSetAlgorithm() ?
+                                org.apache.parquet.column.schema.EdgeInterpolationAlgorithm.valueOf(geography.getAlgorithm().name()) :
+                                LogicalTypeAnnotation.DEFAULT_ALGO);
+            }
         };
     }
 
@@ -494,6 +507,24 @@ public final class ParquetMetadataConverter
         public Optional<LogicalType> visit(IntervalLogicalTypeAnnotation type)
         {
             return Optional.of(LogicalType.UNKNOWN(new NullType()));
+        }
+
+        @Override
+        public Optional<LogicalType> visit(LogicalTypeAnnotation.GeometryLogicalTypeAnnotation type)
+        {
+            GeometryType geometry = new GeometryType();
+            geometry.setCrs(requireNonNullElse(type.getCrs(), LogicalTypeAnnotation.DEFAULT_CRS));
+            return Optional.of(LogicalType.GEOMETRY(geometry));
+        }
+
+        @Override
+        public Optional<LogicalType> visit(LogicalTypeAnnotation.GeographyLogicalTypeAnnotation type)
+        {
+            GeographyType geography = new GeographyType();
+            geography.setCrs(requireNonNullElse(type.getCrs(), LogicalTypeAnnotation.DEFAULT_CRS));
+            org.apache.parquet.column.schema.EdgeInterpolationAlgorithm algorithm = requireNonNullElse(type.getAlgorithm(), LogicalTypeAnnotation.DEFAULT_ALGO);
+            geography.setAlgorithm(org.apache.parquet.format.EdgeInterpolationAlgorithm.valueOf(algorithm.name()));
+            return Optional.of(LogicalType.GEOGRAPHY(geography));
         }
 
         static TimeUnit convertUnit(LogicalTypeAnnotation.TimeUnit unit)
