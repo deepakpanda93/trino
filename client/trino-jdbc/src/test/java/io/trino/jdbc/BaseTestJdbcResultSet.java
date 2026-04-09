@@ -571,6 +571,66 @@ public abstract class BaseTestJdbcResultSet
     }
 
     @Test
+    public void testVariant()
+            throws Exception
+    {
+        try (ConnectedStatement connectedStatement = newStatement()) {
+            checkRepresentation(connectedStatement.getStatement(), "CAST(NULL AS variant)", Types.JAVA_OBJECT, (rs, column) -> {
+                assertThat(rs.getObject(column)).isNull();
+                assertThat(rs.wasNull()).isTrue();
+                assertThat(rs.getString(column)).isNull();
+                assertThat(rs.wasNull()).isTrue();
+                assertThat(rs.getBytes(column)).isNull();
+                assertThat(rs.wasNull()).isTrue();
+            });
+
+            checkRepresentation(connectedStatement.getStatement(), "CAST(DATE '2021-02-03' AS variant)", Types.JAVA_OBJECT, (rs, column) -> {
+                Variant variant = rs.getObject(column, Variant.class);
+                assertThat(rs.getObject(column)).isInstanceOf(Variant.class);
+                assertThat(variant.valueType()).isEqualTo(Variant.ValueType.DATE);
+                assertThat(variant.getLocalDate()).isEqualTo(LocalDate.of(2021, 2, 3));
+                assertThat(rs.getObject(column, Object.class)).isEqualTo(LocalDate.of(2021, 2, 3));
+                assertSqlExceptionThrownBy(() -> rs.getObject(column, Map.class)).hasMessage("VARIANT is not an object");
+                assertSqlExceptionThrownBy(() -> rs.getObject(column, List.class)).hasMessage("VARIANT is not an array");
+
+                ResultSetMetaData metaData = rs.getMetaData();
+                assertThat(metaData.getColumnTypeName(column)).isEqualTo("variant");
+                assertThat(metaData.getColumnClassName(column)).isEqualTo("io.trino.jdbc.Variant");
+            });
+
+            checkRepresentation(connectedStatement.getStatement(), "CAST(X'010203' AS variant)", Types.JAVA_OBJECT, (rs, column) -> {
+                Variant variant = rs.getObject(column, Variant.class);
+                assertThat(variant.valueType()).isEqualTo(Variant.ValueType.BINARY);
+                assertThat(variant.getBinary()).containsExactly((byte) 0x01, (byte) 0x02, (byte) 0x03);
+                assertThat((byte[]) rs.getObject(column, Object.class)).containsExactly((byte) 0x01, (byte) 0x02, (byte) 0x03);
+            });
+
+            checkRepresentation(connectedStatement.getStatement(), "CAST(ARRAY[1, 2, 3] AS variant)", Types.JAVA_OBJECT, (rs, column) -> {
+                Variant variant = rs.getObject(column, Variant.class);
+                assertThat(variant.valueType()).isEqualTo(Variant.ValueType.ARRAY);
+                assertThat(variant.getArrayElement(0).getInt()).isEqualTo(1);
+                assertThat(variant.getArrayElement(1).getInt()).isEqualTo(2);
+                assertThat(variant.getArrayElement(2).getInt()).isEqualTo(3);
+                assertThat(rs.getObject(column, List.class)).isEqualTo(ImmutableList.of(1, 2, 3));
+                assertThat(rs.getObject(column, Object.class)).isEqualTo(ImmutableList.of(1, 2, 3));
+                assertSqlExceptionThrownBy(() -> rs.getObject(column, Map.class)).hasMessage("VARIANT is not an object");
+            });
+
+            checkRepresentation(connectedStatement.getStatement(), "CAST(MAP(ARRAY['a', 'b'], ARRAY[1, 2]) AS variant)", Types.JAVA_OBJECT, (rs, column) -> {
+                Variant variant = rs.getObject(column, Variant.class);
+                assertThat(variant.valueType()).isEqualTo(Variant.ValueType.OBJECT);
+                assertThat(variant.getObjectFields()).containsKey("a");
+                assertThat(variant.getObjectFields()).containsKey("b");
+                assertThat(variant.getObjectFields().get("a").getInt()).isEqualTo(1);
+                assertThat(variant.getObjectFields().get("b").getInt()).isEqualTo(2);
+                assertThat(rs.getObject(column, Map.class)).isEqualTo(ImmutableMap.of("a", 1, "b", 2));
+                assertThat(rs.getObject(column, Object.class)).isEqualTo(ImmutableMap.of("a", 1, "b", 2));
+                assertSqlExceptionThrownBy(() -> rs.getObject(column, List.class)).hasMessage("VARIANT is not an array");
+            });
+        }
+    }
+
+    @Test
     public void testChar()
             throws Exception
     {

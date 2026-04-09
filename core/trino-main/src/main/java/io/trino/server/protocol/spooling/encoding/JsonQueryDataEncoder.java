@@ -18,6 +18,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import io.trino.Session;
+import io.trino.client.ClientCapabilities;
+import io.trino.client.spooling.DataAttribute;
 import io.trino.client.spooling.DataAttributes;
 import io.trino.server.protocol.JsonEncodingUtils.TypeEncoder;
 import io.trino.server.protocol.OutputColumn;
@@ -48,6 +50,7 @@ public class JsonQueryDataEncoder
     private TypeEncoder[] typeEncoders;
     private int[] sourcePageChannels;
     private final JsonFactory factory;
+    private final String variantEncoding;
 
     public JsonQueryDataEncoder(Session session, List<OutputColumn> columns, JsonFactory factory)
     {
@@ -59,6 +62,7 @@ public class JsonQueryDataEncoder
             .mapToInt(OutputColumn::sourcePageChannel)
             .toArray();
         this.factory = requireNonNull(factory, "factory is null");
+        this.variantEncoding = session.getClientCapabilities().contains(ClientCapabilities.VARIANT_BINARY.toString()) ? "binary" : "json";
     }
 
     @Override
@@ -70,6 +74,7 @@ public class JsonQueryDataEncoder
             writePagesToJsonGenerator(e -> { throw e; }, generator, typeEncoders, sourcePageChannels, pages);
             return DataAttributes.builder()
                     .set(SEGMENT_SIZE, toIntExact(wrapper.getCount()))
+                    .set(DataAttribute.VARIANT_ENCODING, variantEncoding)
                     .build();
         }
         catch (Exception e) {

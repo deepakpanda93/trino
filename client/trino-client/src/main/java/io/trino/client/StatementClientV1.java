@@ -69,7 +69,6 @@ import static java.net.HttpURLConnection.HTTP_BAD_METHOD;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -132,13 +131,14 @@ class StatementClientV1
                 .map(Optional::get)
                 .findFirst();
         this.setOriginalRoles.addAll(session.getOriginalRoles());
-        this.clientCapabilities = Joiner.on(",").join(clientCapabilities.orElseGet(() -> stream(ClientCapabilities.values())
-                .map(Enum::name)
-                .collect(toImmutableSet())));
+        Set<String> effectiveClientCapabilities = clientCapabilities.orElseGet(ClientCapabilities::defaultClientCapabilities);
+        this.clientCapabilities = Joiner.on(",").join(effectiveClientCapabilities);
         this.compressionDisabled = session.isCompressionDisabled();
         this.heartbeatInterval = session.getHeartbeatInterval().toMillis() * 1_000_000;
 
-        this.resultRowsDecoder = new ResultRowsDecoder(new OkHttpSegmentLoader(requireNonNull(segmentHttpCallFactory, "segmentHttpCallFactory is null")));
+        this.resultRowsDecoder = new ResultRowsDecoder(
+                new OkHttpSegmentLoader(requireNonNull(segmentHttpCallFactory, "segmentHttpCallFactory is null")),
+                effectiveClientCapabilities.contains(ClientCapabilities.VARIANT_BINARY.toString()));
 
         Request request = buildQueryRequest(session, query, session.getEncoding());
         // Pass empty as materializedJsonSizeLimit to always materialize the first response
@@ -534,6 +534,12 @@ class StatementClientV1
 
     private void processResponse(Headers headers, QueryResults results)
     {
+        String variantEncoding = headers.get(TRINO_HEADERS.responseVariantEncoding());
+        if (variantEncoding == null) {
+            variantEncoding = ResultRowsDecoder.VARIANT_ENCODING_JSON;
+        }
+        resultRowsDecoder.setVariantEncoding(variantEncoding);
+
         setCatalog.set(headers.get(TRINO_HEADERS.responseSetCatalog()));
         setSchema.set(headers.get(TRINO_HEADERS.responseSetSchema()));
         setPath.set(safeSplitToList(headers.get(TRINO_HEADERS.responseSetPath())));

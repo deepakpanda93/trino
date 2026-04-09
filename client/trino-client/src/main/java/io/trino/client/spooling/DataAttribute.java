@@ -29,6 +29,8 @@ public enum DataAttribute
     UNCOMPRESSED_SIZE("uncompressedSize", Integer.class),
     // Placeholder for future encoder-specific schema
     SCHEMA("schema", String.class),
+    // Wire encoding used for VARIANT values in this result set
+    VARIANT_ENCODING("variantEncoding", String.class),
     // Segment expiration time
     EXPIRES_AT("expiresAt", String.class);
 

@@ -40,7 +40,8 @@ record QueryResultsResponse(
         boolean clearTransactionId,
         ProtocolHeaders protocolHeaders,
         QueryResults queryResults,
-        Optional<String> queryDataEncoding)
+        Optional<String> queryDataEncoding,
+        Optional<String> variantEncoding)
 {
     QueryResultsResponse {
         requireNonNull(setCatalog, "setCatalog is null");
@@ -57,5 +58,6 @@ record QueryResultsResponse(
         requireNonNull(protocolHeaders, "protocolHeaders is null");
         requireNonNull(queryResults, "queryResults is null");
         requireNonNull(queryDataEncoding, "queryDataEncoding is null");
+        requireNonNull(variantEncoding, "variantEncoding is null");
     }
 }

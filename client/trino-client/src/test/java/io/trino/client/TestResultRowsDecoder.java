@@ -27,8 +27,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalDouble;
@@ -76,10 +78,29 @@ class TestResultRowsDecoder
     }
 
     @Test
-    public void testVariantJsonNodeMaterialization()
+    public void testVariantBinaryJsonNodeMaterialization()
             throws Exception
     {
-        try (ResultRowsDecoder decoder = new ResultRowsDecoder(); JsonParser parser = JSON_MAPPER.createParser("[[{\"a\":1,\"b\":[\"x\"]}]]")) {
+        EncodedVariant variant = spiCompatibleIntVariant(0x01020304);
+        String json = "[[" + toBinaryEnvelopeJson(variant) + "]]";
+        try (ResultRowsDecoder decoder = new ResultRowsDecoder(true); JsonParser parser = JSON_MAPPER.createParser(json)) {
+            List<List<Object>> rows = eagerlyMaterialize(decoder.toRows(fromQueryData(new JsonQueryData(parser.readValueAsTree()), variantColumns())));
+            assertThat(rows).hasSize(1);
+            assertThat(rows.get(0)).hasSize(1);
+            assertThat(rows.get(0).get(0)).isInstanceOf(EncodedVariant.class);
+
+            EncodedVariant encodedVariant = (EncodedVariant) rows.get(0).get(0);
+            assertThat(encodedVariant.getMetadataBytes()).isEqualTo(variant.getMetadataBytes());
+            assertThat(encodedVariant.getValueBytes()).isEqualTo(variant.getValueBytes());
+        }
+    }
+
+    @Test
+    public void testVariantJsonMaterializationWhenBinarySupportEnabled()
+            throws Exception
+    {
+        try (ResultRowsDecoder decoder = new ResultRowsDecoder(true); JsonParser parser = JSON_MAPPER.createParser("[[{\"a\":1,\"b\":[\"x\"]}]]")) {
+            decoder.setVariantEncoding(ResultRowsDecoder.VARIANT_ENCODING_JSON);
             assertThat(eagerlyMaterialize(decoder.toRows(fromQueryData(new JsonQueryData(parser.readValueAsTree()), variantColumns()))))
                     .containsExactly(ImmutableList.of("{\"a\":1,\"b\":[\"x\"]}"));
         }
@@ -137,14 +158,21 @@ class TestResultRowsDecoder
     }
 
     @Test
-    public void testSpooledVariantJsonMaterialization()
+    public void testSpooledVariantBinaryMaterialization()
             throws Exception
     {
+        EncodedVariant variant = spiCompatibleIntVariant(0x01020304);
         AtomicInteger loaded = new AtomicInteger();
         AtomicInteger acknowledged = new AtomicInteger();
-        try (ResultRowsDecoder decoder = new ResultRowsDecoder(new StaticLoader(loaded, acknowledged, "[[\"{\\\"a\\\":1,\\\"b\\\":[\\\"x\\\"]}\"]]"))) {
-            assertThat(eagerlyMaterialize(decoder.toRows(fromSegments(variantColumns(), spooledSegment(1)))))
-                    .containsExactly(ImmutableList.of("{\"a\":1,\"b\":[\"x\"]}"));
+        try (ResultRowsDecoder decoder = new ResultRowsDecoder(new StaticLoader(loaded, acknowledged, "[[" + toBinaryEnvelopeJson(variant) + "]]"), true)) {
+            List<List<Object>> rows = eagerlyMaterialize(decoder.toRows(fromSegments(variantColumns(), spooledSegment(1))));
+            assertThat(rows).hasSize(1);
+            assertThat(rows.get(0)).hasSize(1);
+            assertThat(rows.get(0).get(0)).isInstanceOf(EncodedVariant.class);
+
+            EncodedVariant encodedVariant = (EncodedVariant) rows.get(0).get(0);
+            assertThat(encodedVariant.getMetadataBytes()).isEqualTo(variant.getMetadataBytes());
+            assertThat(encodedVariant.getValueBytes()).isEqualTo(variant.getValueBytes());
         }
         assertThat(loaded.get()).isEqualTo(1);
         assertThat(acknowledged.get()).isEqualTo(1);
@@ -333,5 +361,31 @@ class TestResultRowsDecoder
     private static List<Column> variantColumns()
     {
         return ImmutableList.of(new Column("variant", "variant", new ClientTypeSignature("variant", ImmutableList.of())));
+    }
+
+    private static String toBinaryEnvelopeJson(EncodedVariant variant)
+    {
+        return "{\"metadata\":\"" + Base64.getEncoder().encodeToString(variant.getMetadataBytes()) +
+                "\",\"value\":\"" + Base64.getEncoder().encodeToString(variant.getValueBytes()) + "\"}";
+    }
+
+    // Reflectively use the SPI encoder because trino-client tests compile with --release 11.
+    private static EncodedVariant spiCompatibleIntVariant(int value)
+    {
+        try {
+            Class<?> spiVariantClass = Class.forName("io.trino.spi.variant.Variant");
+            Method ofInt = spiVariantClass.getMethod("ofInt", int.class);
+            Object spiVariant = ofInt.invoke(null, value);
+
+            Object metadata = spiVariant.getClass().getMethod("metadata").invoke(spiVariant);
+            Object metadataSlice = metadata.getClass().getMethod("toSlice").invoke(metadata);
+            byte[] metadataBytes = (byte[]) metadataSlice.getClass().getMethod("getBytes").invoke(metadataSlice);
+            Object dataSlice = spiVariant.getClass().getMethod("data").invoke(spiVariant);
+            byte[] valueBytes = (byte[]) dataSlice.getClass().getMethod("getBytes").invoke(dataSlice);
+            return EncodedVariant.fromBytes(metadataBytes, valueBytes);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to create EncodedVariant using SPI Variant.ofInt", e);
+        }
     }
 }

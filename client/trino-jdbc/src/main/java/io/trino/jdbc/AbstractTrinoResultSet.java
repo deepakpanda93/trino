@@ -23,6 +23,7 @@ import io.trino.client.ClientTypeSignature;
 import io.trino.client.ClientTypeSignatureParameter;
 import io.trino.client.CloseableIterator;
 import io.trino.client.Column;
+import io.trino.client.EncodedVariant;
 import io.trino.client.IntervalDayTime;
 import io.trino.client.IntervalYearMonth;
 import io.trino.jdbc.ColumnInfo.Nullable;
@@ -150,6 +151,7 @@ abstract class AbstractTrinoResultSet
             .put("interval day to second", TrinoIntervalDayTime.class)
             .put("map", Map.class)
             .put("row", Row.class)
+            .put("variant", Variant.class)
             .buildOrThrow();
 
     @VisibleForTesting
@@ -200,6 +202,10 @@ abstract class AbstractTrinoResultSet
                         }
                         return result;
                     })
+                    .add("variant", EncodedVariant.class, Variant.class, AbstractTrinoResultSet::decodeVariant)
+                    .add("variant", EncodedVariant.class, Object.class, value -> decodeVariant(value).toObject())
+                    .add("variant", EncodedVariant.class, Map.class, value -> variantToMap(decodeVariant(value)))
+                    .add("variant", EncodedVariant.class, List.class, value -> variantToList(decodeVariant(value)))
                     .build();
     protected final CloseableIterator<List<Object>> results;
     private final Map<String, Integer> fieldMap;
@@ -661,6 +667,7 @@ abstract class AbstractTrinoResultSet
             throws SQLException
     {
         ColumnInfo columnInfo = columnInfo(columnIndex);
+        Object value = column(columnIndex);
 
         if (columnInfo.getColumnType() == Types.ARRAY) {
             // Array requires special treatment due to element metadata provided by the Array object
@@ -668,12 +675,16 @@ abstract class AbstractTrinoResultSet
             return getArray(columnIndex);
         }
 
+        if (columnInfo.getColumnTypeSignature().getRawType().equals("variant") && value instanceof String) {
+            return value;
+        }
+
         Class<?> defaultRepresentation = DEFAULT_OBJECT_REPRESENTATION.get(columnInfo.getColumnTypeSignature().getRawType());
         if (defaultRepresentation != null) {
             return getObject(columnIndex, defaultRepresentation);
         }
 
-        return column(columnIndex);
+        return value;
     }
 
     @jakarta.annotation.Nullable
@@ -728,6 +739,10 @@ abstract class AbstractTrinoResultSet
             }
         }
 
+        if (columnType.getRawType().equals("variant") && value instanceof String) {
+            return value;
+        }
+
         Class<?> defaultRepresentation = DEFAULT_OBJECT_REPRESENTATION.get(columnType.getRawType());
         if (defaultRepresentation != null) {
             return TYPE_CONVERSIONS.convert(columnType, value, defaultRepresentation);
@@ -739,6 +754,29 @@ abstract class AbstractTrinoResultSet
     private static TrinoIntervalYearMonth parseIntervalYearMonth(String value)
     {
         return new TrinoIntervalYearMonth(IntervalYearMonth.parseMonths(value));
+    }
+
+    private static Variant decodeVariant(EncodedVariant value)
+    {
+        return Variant.fromBytes(value.getMetadataBytes(), value.getValueBytes());
+    }
+
+    private static Map<?, ?> variantToMap(Variant variant)
+            throws SQLException
+    {
+        if (variant.valueType() != Variant.ValueType.OBJECT) {
+            throw new SQLException("VARIANT is not an object");
+        }
+        return (Map<?, ?>) variant.toObject();
+    }
+
+    private static List<?> variantToList(Variant variant)
+            throws SQLException
+    {
+        if (variant.valueType() != Variant.ValueType.ARRAY) {
+            throw new SQLException("VARIANT is not an array");
+        }
+        return (List<?>) variant.toObject();
     }
 
     private static TrinoIntervalDayTime parseIntervalDayTime(String value)
@@ -1831,6 +1869,13 @@ abstract class AbstractTrinoResultSet
         }
 
         ClientTypeSignature columnTypeSignature = columnInfo(columnIndex).getColumnTypeSignature();
+        if (columnTypeSignature.getRawType().equals("variant") && object instanceof String) {
+            if (type.isInstance(object)) {
+                return type.cast(object);
+            }
+            throw new SQLException(format("Cannot convert VARIANT JSON text to %s", type));
+        }
+
         if (type.isInstance(object) && !TYPE_CONVERSIONS.hasConversion(columnTypeSignature.getRawType(), type)) {
             return type.cast(object);
         }

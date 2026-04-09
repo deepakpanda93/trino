@@ -270,6 +270,8 @@ class ColumnInfo
                 return new TypeInfo(Types.JAVA_OBJECT, Map.class);
             case ClientStandardTypes.ROW:
                 return new TypeInfo(Types.JAVA_OBJECT, Row.class);
+            case ClientStandardTypes.VARIANT:
+                return new TypeInfo(Types.JAVA_OBJECT, Variant.class);
 
             case ClientStandardTypes.JSON:
             case ClientStandardTypes.IPADDRESS:

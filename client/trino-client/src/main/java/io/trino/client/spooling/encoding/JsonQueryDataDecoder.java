@@ -18,6 +18,7 @@ import io.trino.client.Column;
 import io.trino.client.JsonDecodingUtils.TypeDecoder;
 import io.trino.client.JsonIterators;
 import io.trino.client.QueryDataDecoder;
+import io.trino.client.spooling.DataAttribute;
 import io.trino.client.spooling.DataAttributes;
 
 import java.io.IOException;
@@ -56,7 +57,10 @@ public class JsonQueryDataDecoder
         @Override
         public QueryDataDecoder create(List<Column> columns, DataAttributes queryAttributes)
         {
-            return new JsonQueryDataDecoder(createTypeDecoders(columns));
+            boolean supportsVariantBinary = queryAttributes.getOptional(DataAttribute.VARIANT_ENCODING, String.class)
+                    .map("binary"::equals)
+                    .orElse(false);
+            return new JsonQueryDataDecoder(createTypeDecoders(columns, supportsVariantBinary));
         }
 
         @Override

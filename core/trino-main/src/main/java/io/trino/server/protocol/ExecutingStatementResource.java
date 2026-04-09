@@ -275,6 +275,8 @@ public class ExecutingStatementResource
 
         resultsResponse.queryDataEncoding()
                 .ifPresent(encoding -> response.header(TRINO_HEADERS.responseQueryDataEncoding(), encoding));
+        resultsResponse.variantEncoding()
+                .ifPresent(encoding -> response.header(protocolHeaders.responseVariantEncoding(), encoding));
 
         return response.build();
     }

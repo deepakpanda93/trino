@@ -13,6 +13,7 @@
  */
 package io.trino.client;
 
+import io.trino.client.spooling.DataAttribute;
 import io.trino.client.spooling.DataAttributes;
 import io.trino.client.spooling.EncodedQueryData;
 import io.trino.client.spooling.SegmentLoader;
@@ -37,29 +38,54 @@ import static java.util.Objects.requireNonNull;
 public class ResultRowsDecoder
         implements AutoCloseable
 {
+    static final String VARIANT_ENCODING_BINARY = "binary";
+    static final String VARIANT_ENCODING_JSON = "json";
+
     private final SegmentLoader loader;
+    private String variantEncoding;
     private QueryDataDecoder decoder;
 
     public ResultRowsDecoder()
     {
-        this(new OkHttpSegmentLoader());
+        this(new OkHttpSegmentLoader(), false);
+    }
+
+    public ResultRowsDecoder(boolean supportsVariantBinary)
+    {
+        this(new OkHttpSegmentLoader(), supportsVariantBinary);
     }
 
     public ResultRowsDecoder(SegmentLoader loader)
     {
-        this.loader = requireNonNull(loader, "loader is null");
+        this(loader, false);
     }
 
-    private void setEncoding(List<Column> columns, String encoding)
+    public ResultRowsDecoder(SegmentLoader loader, boolean supportsVariantBinary)
+    {
+        this.loader = requireNonNull(loader, "loader is null");
+        this.variantEncoding = supportsVariantBinary ? VARIANT_ENCODING_BINARY : VARIANT_ENCODING_JSON;
+    }
+
+    void setVariantEncoding(String variantEncoding)
+    {
+        this.variantEncoding = requireNonNull(variantEncoding, "variantEncoding is null");
+    }
+
+    private void setEncoding(List<Column> columns, String encoding, DataAttributes queryAttributes)
     {
         if (decoder != null) {
             checkState(decoder.encoding().equals(encoding), "Decoder is configured for encoding %s but got %s", decoder.encoding(), encoding);
         }
         else {
             checkState(!columns.isEmpty(), "Columns must be set when decoding data");
+            DataAttributes effectiveQueryAttributes = requireNonNull(queryAttributes, "queryAttributes is null");
+            if (effectiveQueryAttributes.getOptional(DataAttribute.VARIANT_ENCODING, String.class).isEmpty()) {
+                effectiveQueryAttributes = effectiveQueryAttributes.toBuilder()
+                        .set(DataAttribute.VARIANT_ENCODING, variantEncoding)
+                        .build();
+            }
             this.decoder = QueryDataDecoders.get(encoding)
-                    // we don't use query-level attributes for now
-                    .create(columns, DataAttributes.empty());
+                    .create(columns, effectiveQueryAttributes);
         }
     }
 
@@ -88,7 +114,7 @@ public class ResultRowsDecoder
         if (data instanceof JsonQueryData) {
             JsonQueryData jsonData = (JsonQueryData) data;
             try {
-                return wrapIterator(JsonIterators.forJsonParser(jsonData.getJsonParser(), columns), jsonData.getRowsCount());
+                return wrapIterator(JsonIterators.forJsonParser(jsonData.getJsonParser(), columns, VARIANT_ENCODING_BINARY.equals(variantEncoding)), jsonData.getRowsCount());
             }
             catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -97,7 +123,7 @@ public class ResultRowsDecoder
 
         if (data instanceof EncodedQueryData) {
             EncodedQueryData encodedData = (EncodedQueryData) data;
-            setEncoding(columns, encodedData.getEncoding());
+            setEncoding(columns, encodedData.getEncoding(), encodedData.getMetadata());
             return wrapIterator(new SegmentsIterator(loader, decoder, encodedData.getSegments()), encodedData.getRowsCount());
         }
 

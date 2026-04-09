@@ -51,6 +51,7 @@ import static io.trino.client.ProtocolHeaders.Headers.RESPONSE_SET_ROLE;
 import static io.trino.client.ProtocolHeaders.Headers.RESPONSE_SET_SCHEMA;
 import static io.trino.client.ProtocolHeaders.Headers.RESPONSE_SET_SESSION;
 import static io.trino.client.ProtocolHeaders.Headers.RESPONSE_STARTED_TRANSACTION_ID;
+import static io.trino.client.ProtocolHeaders.Headers.RESPONSE_VARIANT_ENCODING;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -88,6 +89,7 @@ public final class ProtocolHeaders
         RESPONSE_SET_ROLE("Set-Role"),
         RESPONSE_SET_ORIGINAL_ROLES("Set-Original-Roles"),
         RESPONSE_QUERY_DATA_ENCODING("Query-Data-Encoding"),
+        RESPONSE_VARIANT_ENCODING("Variant-Encoding"),
         RESPONSE_ADDED_PREPARE("Added-Prepare"),
         RESPONSE_DEALLOCATED_PREPARE("Deallocated-Prepare"),
         RESPONSE_STARTED_TRANSACTION_ID("Started-Transaction-Id"),
@@ -136,6 +138,7 @@ public final class ProtocolHeaders
     private final String responseClearSession;
     private final String responseSetRole;
     private final String responseQueryDataEncoding;
+    private final String responseVariantEncoding;
     private final String responseAddedPrepare;
     private final String responseDeallocatedPrepare;
     private final String responseStartedTransactionId;
@@ -185,6 +188,7 @@ public final class ProtocolHeaders
         responseClearSession = RESPONSE_CLEAR_SESSION.withProtocolName(name);
         responseSetRole = RESPONSE_SET_ROLE.withProtocolName(name);
         responseQueryDataEncoding = RESPONSE_QUERY_DATA_ENCODING.withProtocolName(name);
+        responseVariantEncoding = RESPONSE_VARIANT_ENCODING.withProtocolName(name);
         responseAddedPrepare = RESPONSE_ADDED_PREPARE.withProtocolName(name);
         responseDeallocatedPrepare = RESPONSE_DEALLOCATED_PREPARE.withProtocolName(name);
         responseStartedTransactionId = RESPONSE_STARTED_TRANSACTION_ID.withProtocolName(name);
@@ -342,6 +346,11 @@ public final class ProtocolHeaders
     public String responseQueryDataEncoding()
     {
         return responseQueryDataEncoding;
+    }
+
+    public String responseVariantEncoding()
+    {
+        return responseVariantEncoding;
     }
 
     public String responseAddedPrepare()
