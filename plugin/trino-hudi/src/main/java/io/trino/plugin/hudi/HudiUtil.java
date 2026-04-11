@@ -245,7 +245,7 @@ public final class HudiUtil
         }
         catch (Throwable e) {
             throw new TrinoException(HUDI_META_CLIENT_ERROR,
-                    "Unable to load Hudi meta client for table %s (%s)".formatted(tableName, basePath));
+                    "Unable to load Hudi meta client for table %s (%s)".formatted(tableName, basePath), e);
         }
     }
 
