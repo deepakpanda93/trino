@@ -106,7 +106,7 @@ public class HudiColumnStatsIndexSupport
                                                 // Pre-compute the Domain object for each HoodieMetadataColumnStats
                                                 stats -> getDomainFromColumnStats(stats.getColumnName(), columnTypes.get(stats.getColumnName()), stats))));
 
-                log.debug("Column stats lookup took %s ms and identified %d relevant file IDs.", timer.endTimer(), domainsWithStats.size());
+                log.info("Column stats lookup took %s ms and identified %d relevant file IDs.", timer.endTimer(), domainsWithStats.size());
 
                 return Optional.of(domainsWithStats);
             });
