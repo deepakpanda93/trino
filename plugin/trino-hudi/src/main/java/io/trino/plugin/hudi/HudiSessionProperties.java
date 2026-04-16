@@ -254,7 +254,7 @@ public class HudiSessionProperties
                         hudiConfig.isResolveColumnNameCasingEnabled(),
                         true),
                 longProperty(
-                        BENCHMARK_SLEEP_MS,
+                        HUDI_BENCHMARK_SLEEP_MS,
                         "Milliseconds to sleep per split in HudiBenchmarkPageSourceProvider (for benchmarking)",
                         10L,
                         val -> {

@@ -69,7 +69,7 @@ public class HudiBenchmarkPageSourceProvider
         SPLITS_PROCESSED.incrementAndGet();
         try {
             long sleepMs = HudiSessionProperties.getBenchmarkSleepMs(session);
-            System.out.println("Hudi benchmark sleep_ms=" + sleepMs);
+            log.info("Hudi benchmark sleep_ms=%d", sleepMs);
             Thread.sleep(sleepMs);
         }
         catch (Exception e) {
