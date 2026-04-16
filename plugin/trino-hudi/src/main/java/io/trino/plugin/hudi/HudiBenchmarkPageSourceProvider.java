@@ -37,7 +37,6 @@ public class HudiBenchmarkPageSourceProvider
         implements ConnectorPageSourceProvider
 {
     private static final Logger log = Logger.get(HudiPageSourceProvider.class);
-    public static final java.util.concurrent.atomic.AtomicLong SLEEP_MS = new java.util.concurrent.atomic.AtomicLong(500);
     public static final java.util.concurrent.atomic.AtomicLong SPLITS_PROCESSED = new java.util.concurrent.atomic.AtomicLong(0);
 
     @Inject
@@ -69,7 +68,9 @@ public class HudiBenchmarkPageSourceProvider
         // TODO: Move this check into a higher calling stack, such that the split is not created at all
         SPLITS_PROCESSED.incrementAndGet();
         try {
-            Thread.sleep(SLEEP_MS.get());
+            long sleepMs = HudiSessionProperties.getBenchmarkSleepMs(session);
+            System.out.println("Hudi benchmark sleep_ms=" + sleepMs);
+            Thread.sleep(sleepMs);
         }
         catch (Exception e) {
             log.error("Failed while waiting to read the file");

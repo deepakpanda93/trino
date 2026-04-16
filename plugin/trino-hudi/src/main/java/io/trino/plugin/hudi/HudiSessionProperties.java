@@ -36,6 +36,7 @@ import static io.trino.spi.StandardErrorCode.INVALID_SESSION_PROPERTY;
 import static io.trino.spi.session.PropertyMetadata.booleanProperty;
 import static io.trino.spi.session.PropertyMetadata.doubleProperty;
 import static io.trino.spi.session.PropertyMetadata.integerProperty;
+import static io.trino.spi.session.PropertyMetadata.longProperty;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
@@ -75,6 +76,7 @@ public class HudiSessionProperties
     static final String RECORD_INDEX_WAIT_TIMEOUT = "record_index_wait_timeout";
     static final String SECONDARY_INDEX_WAIT_TIMEOUT = "secondary_index_wait_timeout";
     static final String METADATA_PARTITION_LISTING_ENABLED = "metadata_partition_listing_enabled";
+    static final String HUDI_BENCHMARK_SLEEP_MS = "hudi_benchmark_sleep_ms";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -250,7 +252,19 @@ public class HudiSessionProperties
                         RESOLVE_COLUMN_NAME_CASING_ENABLED,
                         "Enable resolve column name casing",
                         hudiConfig.isResolveColumnNameCasingEnabled(),
-                        true));
+                        true),
+                longProperty(
+                        BENCHMARK_SLEEP_MS,
+                        "Milliseconds to sleep per split in HudiBenchmarkPageSourceProvider (for benchmarking)",
+                        10L,
+                        val -> {
+                            if (val < 0) {
+                                throw new TrinoException(
+                                        INVALID_SESSION_PROPERTY,
+                                        format("%s must be >= 0: %s", HUDI_BENCHMARK_SLEEP_MS, val));
+                            }
+                        },
+                        false));
     }
 
     @Override
@@ -413,5 +427,10 @@ public class HudiSessionProperties
     public static boolean isMetadataPartitionListingEnabled(ConnectorSession session)
     {
         return session.getProperty(METADATA_PARTITION_LISTING_ENABLED, Boolean.class);
+    }
+
+    public static long getBenchmarkSleepMs(ConnectorSession session)
+    {
+        return session.getProperty(HUDI_BENCHMARK_SLEEP_MS, Long.class);
     }
 }
