@@ -37,7 +37,7 @@ public class HudiBenchmarkPageSourceProvider
         implements ConnectorPageSourceProvider
 {
     private static final Logger log = Logger.get(HudiPageSourceProvider.class);
-    public static final java.util.concurrent.atomic.AtomicLong SLEEP_MS = new java.util.concurrent.atomic.AtomicLong(10);
+    public static final java.util.concurrent.atomic.AtomicLong SLEEP_MS = new java.util.concurrent.atomic.AtomicLong(500);
     public static final java.util.concurrent.atomic.AtomicLong SPLITS_PROCESSED = new java.util.concurrent.atomic.AtomicLong(0);
 
     @Inject
